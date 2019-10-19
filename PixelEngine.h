@@ -19,6 +19,8 @@
 #include <pthread.h>
 #include <stdatomic.h>
 #include <time.h>
+//Test
+#include <stdlib.h>
 
 #include <stdio.h>
 
@@ -74,9 +76,11 @@ typedef struct
     const char* _priv_window_name;
     //Render area
     PE_Image _priv_image;
+    size_t _priv_wsizex, _priv_wsizey;
+    size_t _priv_pixelsx, _priv_pixelsy;
 } PE_Window;
 
-PE_Window PE_Window_Create(const char* window_name);
+PE_Window PE_Window_Create(const char* window_name, size_t window_width, size_t window_height, size_t render_area_width, size_t render_area_height);
 void PE_Window_Start(PE_Window* window);
 
 void* _priv_PE_Window_Thread(void* arg);
@@ -121,16 +125,29 @@ PE_Pixel PE_Image_GetPixel(PE_Image* image, size_t x, size_t y)
 
 
 
-PE_Window PE_Window_Create(const char* window_name)
+PE_Window PE_Window_Create(const char* window_name, size_t window_width, size_t window_height, size_t render_area_width, size_t render_area_height)
 {
     PE_Window window;
 
     window._priv_window_name = window_name;
     window._priv_thread_run = FALSE;
-    window._priv_image = PE_Image_Create(100, 100);
+    window._priv_image = PE_Image_Create(render_area_width, render_area_height);
+    window._priv_wsizex = window_width;
+    window._priv_wsizey = window_height;
+    window._priv_pixelsx = render_area_width;
+    window._priv_pixelsy = render_area_height;
 
-    for (int x = 0; x < 100; x++)
-        PE_Image_SetPixel(&window._priv_image, x, x, PE_BLACK);
+    PE_Pixel color;
+    color.a = 0xFF;
+    for (int x = 0; x < render_area_width; x++)
+    for (int y = 0; y < render_area_height; y++)
+    {
+        color.r = rand() % 256;
+        color.g = rand() % 256;
+        color.b = rand() % 256;
+        PE_Image_SetPixel(&window._priv_image, x, y, color);
+    }
+
 
     return window;
 }
@@ -166,7 +183,7 @@ void* _priv_PE_Window_Thread(void* arg)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 100, 100, 0, GL_RGBA, GL_UNSIGNED_BYTE, window->_priv_image._priv_pixels);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, window->_priv_pixelsx, window->_priv_pixelsy, 0, GL_RGBA, GL_UNSIGNED_BYTE, window->_priv_image._priv_pixels);
     //glBindTexture(GL_TEXTURE_2D, 0);
 
     clock_t delta_t = clock();
@@ -196,8 +213,8 @@ void* _priv_PE_Window_Thread(void* arg)
 
 
         //Drawing
-        glViewport(0, 0, 400, 400);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 100, 100, GL_RGBA, GL_UNSIGNED_BYTE, window->_priv_image._priv_pixels);
+        glViewport(0, 0, window->_priv_wsizex, window->_priv_wsizey);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,  window->_priv_pixelsx, window->_priv_pixelsy, GL_RGBA, GL_UNSIGNED_BYTE, window->_priv_image._priv_pixels);
         glBegin(GL_QUADS);
             glTexCoord2f(0.0, 1.0); glVertex3f(-1.0f, -1.0f, 0.0f);
             glTexCoord2f(0.0, 0.0); glVertex3f(-1.0f,  1.0f, 0.0f);
@@ -232,7 +249,7 @@ void _priv_PE_Window_CreateWindow(PE_Window* window)
     DWORD style = WS_CAPTION | WS_SYSMENU | WS_VISIBLE | WS_THICKFRAME;
 
     //TEMP
-    RECT window_rect = { 0, 0, 400, 400 };
+    RECT window_rect = { 0, 0, window->_priv_wsizex, window->_priv_wsizey };
     AdjustWindowRectEx(&window_rect, style, FALSE, ex_style);
 
     window->_priv_window_handle =
@@ -273,7 +290,7 @@ void _priv_PE_Window_CreateOpenGL(PE_Window* window)
 
     wglMakeCurrent(hdc, hglrc);
 
-    glViewport(0, 0, 400, 400);
+    glViewport(0, 0, window->_priv_wsizex, window->_priv_wsizey);
 }
 
 LRESULT CALLBACK _priv_PE_Window_WindowEvent(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
