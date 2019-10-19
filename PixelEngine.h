@@ -18,6 +18,9 @@
 
 #include <pthread.h>
 #include <stdatomic.h>
+#include <time.h>
+
+#include <stdio.h>
 
 //Pixel
 
@@ -166,19 +169,41 @@ void* _priv_PE_Window_Thread(void* arg)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 100, 100, 0, GL_RGBA, GL_UNSIGNED_BYTE, window->_priv_image._priv_pixels);
     //glBindTexture(GL_TEXTURE_2D, 0);
 
+    clock_t delta_t = clock();
+    clock_t fps_clock = clock();
+    unsigned int fps_count = 0;
+
     while (window->_priv_thread_run)
     {
+        //FPS limiter
+        fps_count++;
+
+        unsigned int mils = clock() - delta_t;
+        if (mils < 16)
+            Sleep(16 - mils);
+
+        if (clock() - fps_clock >= 1000)
+        {
+            fps_clock = clock();
+            printf("%d FPS\n", fps_count);
+            fps_count = 0;
+        }
+
+        //Updating
+        clock_t new_t = clock();
+        float elapsed = ((float)new_t - delta_t) / 1000;
+        delta_t = new_t;
+
+
+        //Drawing
         glViewport(0, 0, 400, 400);
-
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 100, 100, GL_RGBA, GL_UNSIGNED_BYTE, window->_priv_image._priv_pixels);
-
         glBegin(GL_QUADS);
             glTexCoord2f(0.0, 1.0); glVertex3f(-1.0f, -1.0f, 0.0f);
             glTexCoord2f(0.0, 0.0); glVertex3f(-1.0f,  1.0f, 0.0f);
             glTexCoord2f(1.0, 0.0); glVertex3f( 1.0f,  1.0f, 0.0f);
             glTexCoord2f(1.0, 1.0); glVertex3f( 1.0f, -1.0f, 0.0f);
         glEnd();
-
         SwapBuffers(window->_priv_device_context);
     }
 
