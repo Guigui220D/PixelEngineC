@@ -20,15 +20,17 @@ int main()
 void update(PE_Window* window, float delta)
 {
     static int i = 0;
-    if (i >= 100)
+    if (i >= 20)
     {
         i = 0;
-        printf("yoo\n");
+        //printf("yoo\n");
+        PE_Color col;
+        col.r = rand() % 256;
+        col.g = rand() % 256;
+        col.b = rand() % 256;
+        col.a = 0xFF;
+        PE_Image_DrawRectangle(&window->render_screen, rand() % 100, rand() % 100, rand() % 30, rand() % 30, col);
         window->update_screen = TRUE;
     }
-    else
-    {
-        i++;
-        PE_Image_SetPixel(&window->render_screen, rand() % 100, rand() % 100, PE_RED);
-    }
+    i++;
 }

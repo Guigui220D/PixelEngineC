@@ -1,9 +1,10 @@
 /*
-    Copyright: Guillaume DEREX, 2019
+    Copyright: Guillaume DEREX, 2020
 
     DESCRIPTION
-    This is a super simple header only library to create a window and put pixels on it.
+    This is a super simple header only library to create a window and draw on it.
     It was heavily inspired by OlcPixelGameEngine.
+    It only works on Windows (for the moment)
 */
 
 #ifndef PIXEL_ENGINE
@@ -19,13 +20,18 @@
 #include <pthread.h>
 #include <stdatomic.h>
 #include <time.h>
+
+#include <assert.h>
 //Test
 #include <stdlib.h>
 
 #include <stdio.h>
 
-//Pixel
+/*
+    DEFINITIONS
+*/
 
+//Color definition
 typedef struct
 {
     union
@@ -39,29 +45,35 @@ typedef struct
             uint8_t a;
         };
     };
-} PE_Pixel;
+} PE_Color;
 
-const PE_Pixel PE_WHITE = { ._int = 0xFFFFFFFF };
-const PE_Pixel PE_BLACK = { ._int = 0xFF000000 };
-const PE_Pixel PE_RED = { ._int = 0xFF0000FF };
-const PE_Pixel PE_GREEN = { ._int = 0xFF00FF00 };
-const PE_Pixel PE_BLUE = { ._int = 0xFFFF0000 };
+//Colors
+const PE_Color PE_WHITE = { ._int = 0xFFFFFFFF };
+const PE_Color PE_BLACK = { ._int = 0xFF000000 };
+const PE_Color PE_RED = { ._int = 0xFF0000FF };
+const PE_Color PE_GREEN = { ._int = 0xFF00FF00 };
+const PE_Color PE_BLUE = { ._int = 0xFFFF0000 };
 
-//Image / Sprite
-
+//Image definition
 typedef struct
 {
     size_t _priv_width, _priv_height;
-    PE_Pixel* _priv_pixels;
+    PE_Color* _priv_pixels;
 } PE_Image;
 
+//Sprite definition (they're just images)
+typedef PE_Image PE_Sprite;
+
+//Image functions definitions
 PE_Image PE_Image_Create(size_t width, size_t height);
 void PE_Image_Destroy(PE_Image* image);
 
-void PE_Image_SetPixel(PE_Image* image, size_t x, size_t y, PE_Pixel color);
-PE_Pixel PE_Image_GetPixel(PE_Image* image, size_t x, size_t y);
+void PE_Image_SetPixel(PE_Image* image, size_t x, size_t y, PE_Color color);
+PE_Color PE_Image_GetPixel(PE_Image* image, size_t x, size_t y);
 
-//Window
+void PE_Image_DrawRectangle(PE_Image* image, size_t x, size_t y, size_t width, size_t height, PE_Color color);
+
+//Window definitions
 typedef struct
 {
     //Context & opengl
@@ -81,6 +93,7 @@ typedef struct
     void (*_priv_update_func)(void* window, float delta);
 } PE_Window;
 
+//Window functions definitions
 PE_Window PE_Window_Create(const char* window_name, size_t window_width, size_t window_height, size_t render_area_width, size_t render_area_height, void (*update_function)(void* window, float delta));
 void PE_Window_Start(PE_Window* window);
 
@@ -93,18 +106,21 @@ LRESULT CALLBACK _priv_PE_Window_WindowEvent(HWND hWnd, UINT uMsg, WPARAM wParam
 
 #endif // PIXEL_ENGINE
 
-//Implementation
+/*
+    IMPLEMENTATION
+*/
 
 #ifndef PIXEL_ENGINE_IMPL
 #define PIXEL_ENGINE_IMPL
 
+//Image functions
 PE_Image PE_Image_Create(size_t width, size_t height)
 {
     PE_Image image;
 
     image._priv_width = width;
     image._priv_height = height;
-    image._priv_pixels = malloc(sizeof(PE_Pixel) * width * height);
+    image._priv_pixels = malloc(sizeof(PE_Color) * width * height);
 
     return image;
 }
@@ -114,18 +130,31 @@ void PE_Image_Destroy(PE_Image* image)
     free(image->_priv_pixels);
 }
 
-void PE_Image_SetPixel(PE_Image* image, size_t x, size_t y, PE_Pixel color)
+void PE_Image_SetPixel(PE_Image* image, size_t x, size_t y, PE_Color color)
 {
+    assert(x < image->_priv_width);
+    assert(y < image->_priv_height);
+
     image->_priv_pixels[x + y * image->_priv_width] = color;
 }
 
-PE_Pixel PE_Image_GetPixel(PE_Image* image, size_t x, size_t y)
+PE_Color PE_Image_GetPixel(PE_Image* image, size_t x, size_t y)
 {
+    assert(x < image->_priv_width);
+    assert(y < image->_priv_height);
+
     return image->_priv_pixels[x + y * image->_priv_width];
 }
 
+void PE_Image_DrawRectangle(PE_Image* image, size_t x, size_t y, size_t width, size_t height, PE_Color color)
+{
+    for (size_t xx = x; xx < x + width; xx++)
+    for (size_t yy = y; yy < y + height; yy++)
+        if (xx < image->_priv_width && yy < image->_priv_height)
+            PE_Image_SetPixel(image, xx, yy, color);
+}
 
-
+//Window functions
 PE_Window PE_Window_Create(const char* window_name, size_t window_width, size_t window_height, size_t render_area_width, size_t render_area_height, void (*update_function)(void* window, float delta))
 {
     PE_Window window;
@@ -138,7 +167,7 @@ PE_Window PE_Window_Create(const char* window_name, size_t window_width, size_t 
     window._priv_wsizey = window_height;
     window._priv_update_func = update_function;
 
-    PE_Pixel color;
+    PE_Color color;
     color._int = 0xFFFFFFFF;
     for (int x = 0; x < render_area_width; x++)
     for (int y = 0; y < render_area_height; y++)
