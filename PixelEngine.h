@@ -48,11 +48,16 @@ typedef struct
 } PE_Color;
 
 //Colors
-const PE_Color PE_WHITE = { ._int = 0xFFFFFFFF };
-const PE_Color PE_BLACK = { ._int = 0xFF000000 };
-const PE_Color PE_RED = { ._int = 0xFF0000FF };
-const PE_Color PE_GREEN = { ._int = 0xFF00FF00 };
-const PE_Color PE_BLUE = { ._int = 0xFFFF0000 };
+const PE_Color PE_WHITE =   { ._int = 0xFFFFFFFF };
+const PE_Color PE_BLACK =   { ._int = 0xFF000000 };
+
+const PE_Color PE_RED =     { ._int = 0xFF0000FF };
+const PE_Color PE_GREEN =   { ._int = 0xFF00FF00 };
+const PE_Color PE_BLUE =    { ._int = 0xFFFF0000 };
+
+const PE_Color PE_YELLOW =  { ._int = 0xFF00FFFF };
+const PE_Color PE_CYAN =    { ._int = 0xFFFFFF00 };
+const PE_Color PE_MAGENTA = { ._int = 0xFFFF00FF };
 
 //Image definition
 typedef struct
@@ -96,6 +101,8 @@ typedef struct
 //Window functions definitions
 PE_Window PE_Window_Create(const char* window_name, size_t window_width, size_t window_height, size_t render_area_width, size_t render_area_height, void (*update_function)(void* window, float delta));
 void PE_Window_Start(PE_Window* window);
+
+void PE_Window_Destroy(PE_Window* window);
 
 void* _priv_PE_Window_Thread(void* arg);
 
@@ -196,6 +203,11 @@ void PE_Window_Start(PE_Window* window)
     }
 
     pthread_join(thread, NULL);
+}
+
+void PE_Window_Destroy(PE_Window* window)
+{
+    PE_Image_Destroy(&window->render_screen);
 }
 
 void* _priv_PE_Window_Thread(void* arg)

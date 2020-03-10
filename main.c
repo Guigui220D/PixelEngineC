@@ -14,6 +14,8 @@ int main()
 
     PE_Window_Start(&win);
 
+    PE_Window_Destroy(&win);
+
     return 0;
 }
 
