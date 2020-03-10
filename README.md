@@ -1,5 +1,5 @@
-# QuadLife
+# PixelEngineC
 
-Simple cellular automaton made with https://github.com/Guigui220D/PixelEngineC
-
-See https://www.conwaylife.com/wiki/Colourised_Life
+This is a super simple header only library to create a window and draw on it.
+It was heavily inspired by OlcPixelGameEngine.
+It only works on Windows (at the moment)
